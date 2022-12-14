@@ -86,6 +86,12 @@ func (s *Store) Update(ctx context.Context, ref string) error {
 			return fmt.Errorf("get image info from containerd: %w", err)
 		}
 	}
+	return s.update(ref, img)
+}
+
+// update updates the internal cache. img == nil means that
+// the image does not exist in containerd.
+func (s *Store) update(ref string, img *Image) error {
 	// parsing ref consistently for refCache, including adding `docker.io/library` prefix
 	if !strings.HasPrefix(ref, "sha256:") {
 		namedRef, err := docker.ParseDockerRef(ref)
@@ -94,12 +100,7 @@ func (s *Store) Update(ctx context.Context, ref string) error {
 		}
 		ref = namedRef.String()
 	}
-	return s.update(ref, img)
-}
 
-// update updates the internal cache. img == nil means that
-// the image does not exist in containerd.
-func (s *Store) update(ref string, img *Image) error {
 	oldID, oldExist := s.refCache[ref]
 	if img == nil {
 		// The image reference doesn't exist in containerd.

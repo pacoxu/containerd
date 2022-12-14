@@ -18,6 +18,7 @@ package images
 
 import (
 	"context"
+	"strings"
 
 	eventstypes "github.com/containerd/containerd/api/events"
 	imagesapi "github.com/containerd/containerd/api/services/images/v1"
@@ -171,7 +172,13 @@ func (l *local) Delete(ctx context.Context, req *imagesapi.DeleteImageRequest, _
 	log.G(ctx).WithField("name", req.Name).Debugf("delete image")
 
 	if err := l.store.Delete(ctx, req.Name); err != nil {
-		return nil, errdefs.ToGRPC(err)
+		if strings.HasPrefix(req.Name, "docker.io/library/") {
+			req.Name = strings.TrimPrefix(req.Name, "docker.io/library/")
+			err = l.store.Delete(ctx, req.Name)
+		}
+		if err != nil {
+			return nil, errdefs.ToGRPC(err)
+		}
 	}
 
 	if err := l.publisher.Publish(ctx, "/images/delete", &eventstypes.ImageDelete{
